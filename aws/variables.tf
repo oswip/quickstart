@@ -14,6 +14,10 @@ variable "aws_secret_key" {
   description = "AWS secret key used to create AWS infrastructure"
 }
 
+variable "aws_session_token" {
+  description = "Temporary session token used to create instances"
+}
+
 variable "aws_region" {
   type        = string
   description = "AWS region used for all resources"

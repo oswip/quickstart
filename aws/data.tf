@@ -18,3 +18,17 @@ data "aws_ami" "ubuntu" {
     values = ["hvm"]
   }
 }
+
+data "aws_security_groups" "rancher-nodes" {
+  tags = {
+    Name = "rancher-nodes"
+  }
+}
+
+data "aws_subnet" "cagen1-dev-vpc-PublicSubnetA" {
+  tags = {
+    Name = "cagen1-dev-vpc-PublicSubnetA"
+  }
+}
+
+

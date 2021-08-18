@@ -22,29 +22,30 @@ resource "aws_key_pair" "quickstart_key_pair" {
   public_key      = tls_private_key.global_key.public_key_openssh
 }
 
-# Security group to allow all traffic
-resource "aws_security_group" "rancher_sg_allowall" {
-  name        = "${var.prefix}-rancher-allowall"
-  description = "Rancher quickstart - allow all traffic"
-
-  ingress {
-    from_port   = "0"
-    to_port     = "0"
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port   = "0"
-    to_port     = "0"
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    Creator = "rancher-quickstart"
-  }
-}
+# 2021-07-16 os - disabled this security group creation and instead used existing security group named "rancher-nodes" 
+## Security group to allow all traffic
+#resource "aws_security_group" "rancher_sg_allowall" {
+#  name        = "${var.prefix}-rancher-allowall"
+#  description = "Rancher quickstart - allow all traffic"
+#
+#  ingress {
+#    from_port   = "0"
+#    to_port     = "0"
+#    protocol    = "-1"
+#    cidr_blocks = ["0.0.0.0/0"]
+#  }
+#
+#  egress {
+#    from_port   = "0"
+#    to_port     = "0"
+#    protocol    = "-1"
+#    cidr_blocks = ["0.0.0.0/0"]
+#  }
+#
+#  tags = {
+#    Creator = "rancher-quickstart"
+#  }
+#}
 
 # AWS EC2 instance for creating a single node RKE cluster and installing the Rancher server
 resource "aws_instance" "rancher_server" {
@@ -52,7 +53,10 @@ resource "aws_instance" "rancher_server" {
   instance_type = var.instance_type
 
   key_name        = aws_key_pair.quickstart_key_pair.key_name
-  security_groups = [aws_security_group.rancher_sg_allowall.name]
+  vpc_security_group_ids = [data.aws_security_groups.rancher-nodes.ids[0]]
+
+  # specify the subnet_id here
+  subnet_id              = data.aws_subnet.cagen1-dev-vpc-PublicSubnetA.id
 
   user_data = templatefile(
     join("/", [path.module, "../cloud-common/files/userdata_rancher_server.template"]),
@@ -75,7 +79,8 @@ resource "aws_instance" "rancher_server" {
 
     connection {
       type        = "ssh"
-      host        = self.public_ip
+      agent       = true
+      host        = self.private_ip
       user        = local.node_username
       private_key = tls_private_key.global_key.private_key_pem
     }
@@ -91,7 +96,7 @@ resource "aws_instance" "rancher_server" {
 module "rancher_common" {
   source = "../rancher-common"
 
-  node_public_ip         = aws_instance.rancher_server.public_ip
+  node_public_ip         = aws_instance.rancher_server.private_ip
   node_internal_ip       = aws_instance.rancher_server.private_ip
   node_username          = local.node_username
   ssh_private_key_pem    = tls_private_key.global_key.private_key_pem
@@ -100,7 +105,7 @@ module "rancher_common" {
   cert_manager_version = var.cert_manager_version
   rancher_version      = var.rancher_version
 
-  rancher_server_dns = join(".", ["rancher", aws_instance.rancher_server.public_ip, "nip.io"])
+  rancher_server_dns = join(".", ["rancher", aws_instance.rancher_server.private_ip, "nip.io"])
 
   admin_password = var.rancher_server_admin_password
 
@@ -108,40 +113,44 @@ module "rancher_common" {
   workload_cluster_name       = "quickstart-aws-custom"
 }
 
-# AWS EC2 instance for creating a single node workload cluster
-resource "aws_instance" "quickstart_node" {
-  ami           = data.aws_ami.ubuntu.id
-  instance_type = var.instance_type
-
-  key_name        = aws_key_pair.quickstart_key_pair.key_name
-  security_groups = [aws_security_group.rancher_sg_allowall.name]
-
-  user_data = templatefile(
-    join("/", [path.module, "files/userdata_quickstart_node.template"]),
-    {
-      docker_version   = var.docker_version
-      username         = local.node_username
-      register_command = module.rancher_common.custom_cluster_command
-    }
-  )
-
-  provisioner "remote-exec" {
-    inline = [
-      "echo 'Waiting for cloud-init to complete...'",
-      "cloud-init status --wait > /dev/null",
-      "echo 'Completed cloud-init!'",
-    ]
-
-    connection {
-      type        = "ssh"
-      host        = self.public_ip
-      user        = local.node_username
-      private_key = tls_private_key.global_key.private_key_pem
-    }
-  }
-
-  tags = {
-    Name    = "${var.prefix}-quickstart-node"
-    Creator = "rancher-quickstart"
-  }
-}
+# 2021-08-17 os - quickstart node wasn't starting, so commented this out, can do deployments to rancher-server instead (see above)
+## AWS EC2 instance for creating a single node workload cluster
+#resource "aws_instance" "quickstart_node" {
+#  ami           = data.aws_ami.ubuntu.id
+#  instance_type = var.instance_type
+#
+#  key_name        = aws_key_pair.quickstart_key_pair.key_name
+#  vpc_security_group_ids = [data.aws_security_groups.rancher-nodes.ids[0]]
+#
+#  # specify the subnet_id here
+#  subnet_id              = data.aws_subnet.cagen1-dev-vpc-PublicSubnetA.id
+#
+#  user_data = templatefile(
+#    join("/", [path.module, "files/userdata_quickstart_node.template"]),
+#    {
+#      docker_version   = var.docker_version
+#      username         = local.node_username
+#      register_command = module.rancher_common.custom_cluster_command
+#    }
+#  )
+#
+#  provisioner "remote-exec" {
+#    inline = [
+#      "echo 'Waiting for cloud-init to complete...'",
+#      "cloud-init status --wait > /dev/null",
+#      "echo 'Completed cloud-init!'",
+#    ]
+#
+#    connection {
+#      type        = "ssh"
+#      host        = self.private_ip
+#      user        = local.node_username
+#      private_key = tls_private_key.global_key.private_key_pem
+#    }
+#  }
+#
+#  tags = {
+#    Name    = "${var.prefix}-quickstart-node"
+#    Creator = "rancher-quickstart"
+#  }
+#}

@@ -5,7 +5,7 @@ resource "rke_cluster" "rancher_cluster" {
   cluster_name = "quickstart-rancher-server"
 
   nodes {
-    address          = var.node_public_ip
+    address          = var.node_internal_ip
     internal_address = var.node_internal_ip
     user             = var.node_username
     role             = ["controlplane", "etcd", "worker"]
