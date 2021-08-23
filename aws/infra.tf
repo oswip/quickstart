@@ -22,7 +22,7 @@ resource "aws_key_pair" "quickstart_key_pair" {
   public_key      = tls_private_key.global_key.public_key_openssh
 }
 
-# 2021-07-16 os - disabled this security group creation and instead used existing security group named "rancher-nodes" 
+# 2021-07-16 os - disabled this security group creation and instead used existing security group named "osdev-rancher-sg" 
 ## Security group to allow all traffic
 #resource "aws_security_group" "rancher_sg_allowall" {
 #  name        = "${var.prefix}-rancher-allowall"
@@ -53,10 +53,11 @@ resource "aws_instance" "rancher_server" {
   instance_type = var.instance_type
 
   key_name        = aws_key_pair.quickstart_key_pair.key_name
-  vpc_security_group_ids = [data.aws_security_groups.rancher-nodes.ids[0]]
+  vpc_security_group_ids = [data.aws_security_groups.osdev-rancher-sg.ids[0]]
 
   # specify the subnet_id here
-  subnet_id              = data.aws_subnet.cagen1-dev-vpc-PublicSubnetA.id
+  #subnet_id              = data.aws_subnet.cagen1-dev-vpc-PublicSubnetA.id
+  subnet_id              = data.aws_subnet.vum-dev-vpc-PublicSubnetA.id
 
   user_data = templatefile(
     join("/", [path.module, "../cloud-common/files/userdata_rancher_server.template"]),
@@ -120,7 +121,7 @@ module "rancher_common" {
 #  instance_type = var.instance_type
 #
 #  key_name        = aws_key_pair.quickstart_key_pair.key_name
-#  vpc_security_group_ids = [data.aws_security_groups.rancher-nodes.ids[0]]
+#  vpc_security_group_ids = [data.aws_security_groups.osdev-rancher-sg.ids[0]]
 #
 #  # specify the subnet_id here
 #  subnet_id              = data.aws_subnet.cagen1-dev-vpc-PublicSubnetA.id

@@ -19,15 +19,15 @@ data "aws_ami" "ubuntu" {
   }
 }
 
-data "aws_security_groups" "rancher-nodes" {
+data "aws_security_groups" "osdev-rancher-sg" {
   tags = {
-    Name = "rancher-nodes"
+    Name = "osdev-rancher-sg"
   }
 }
 
-data "aws_subnet" "cagen1-dev-vpc-PublicSubnetA" {
+data "aws_subnet" "vum-dev-vpc-PublicSubnetA" {
   tags = {
-    Name = "cagen1-dev-vpc-PublicSubnetA"
+    Name = "vum-dev-vpc-PublicSubnetA"
   }
 }
 
